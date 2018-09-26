@@ -7,7 +7,9 @@ from sklearn.linear_model import Perceptron
 from sklearn.ensemble import BaggingClassifier
 from sklearn.metrics import f1_score
 from pruning import kappa_pruning
+from mlxtend.classifier import EnsembleVoteClassifier
 
+np.seterr(divide='ignore', invalid='ignore')
 
 #return instances according to instance hardness
 def get_validation_set():
@@ -23,9 +25,9 @@ def get_data(file_path):
 
     return
 
-X, y = get_data('jm1.arff')
-skf = StratifiedKFold(n_splits=10, random_state=43, shuffle=True)
-es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000), 
+X, y = get_data('..\cm1.arff')
+skf = StratifiedKFold(n_splits=10, random_state=42)
+es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 'balanced'), 
                         n_estimators=100, 
                         max_samples=1.0, 
                         max_features=1.0, 
@@ -33,14 +35,22 @@ es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000),
                         bootstrap_features=False, 
                         n_jobs=4)
 
+mean_fscore_model = []
+mean_fscore_pruned = []
 for train_index, test_index in skf.split(X, y):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
 
     model = es.fit(X_train, y_train)
-    print('F-measure do modelo sem poda')
-    print(f1_score(y_test, model.predict(X_test)))
-    print('F-measure kappa pruning')
-    kappa_pruning(500, X_train, model)
-    print(f1_score(y_test, model.predict(X_test)))
-    break
+    mean_fscore_model.append(f1_score(y_test, model.predict(X_test)))
+    
+    estimators = kappa_pruning(500, X_train, model)
+    eclf = EnsembleVoteClassifier(clfs=estimators)   
+    model_pruned = eclf.fit(X_train, y_train) 
+    mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test)))
+   
+print('F-measure do modelo sem poda')
+print(np.mean(mean_fscore_model))
+print('F-measure kappa pruning')
+print(np.mean(mean_fscore_pruned))
+    

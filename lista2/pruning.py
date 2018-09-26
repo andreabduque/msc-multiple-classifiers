@@ -1,5 +1,8 @@
 import itertools
 from sklearn.metrics import cohen_kappa_score
+import numpy as np
+
+from mlxtend.classifier import EnsembleVoteClassifier
 
 
 #Receives input from validation set
@@ -9,8 +12,10 @@ def kappa_pruning(M, input_data, model):
     naive = []
     for cl1, cl2 in combs:
         kappa_score = cohen_kappa_score(cl1.predict(input_data), cl2.predict(input_data))
-        naive.append((kappa_score, cl1, cl2))
+        if(not np.isnan(kappa_score)):            
+            naive.append((kappa_score, cl1, cl2))
 
+ 
     naive_sorted = sorted(naive, key=lambda tup: tup[0])
     aux = naive_sorted[0:M]
     aux = []
@@ -20,4 +25,4 @@ def kappa_pruning(M, input_data, model):
         
     new_estimators = list(set(aux))
     print('Pool reduzido de ', str(len(model.estimators_)), 'para ', str(len(new_estimators)))
-    model.estimators_ = new_estimators
+    return new_estimators
