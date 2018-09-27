@@ -26,7 +26,11 @@ def disagreement_measure(c1_pred, c2_pred, ground_truth):
 
     return (n_01+n_10)/(n_00+n_01+n_10+n11)
 
-def average_pairwise_diversity(values, L):
+#Diversity measures
+def average_disagreement(classifiers, X_test, ground_truth):
+    pass
+
+def average_kappa(classifiers, X_test, ground_truth):
     pass
 
 def gmean(y_true, y_pred):    

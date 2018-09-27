@@ -10,30 +10,43 @@ warnings.simplefilter("ignore", DeprecationWarning)
 
 #Receives input from validation set
 #Returns pruned model
-def kappa_pruning(M, input_data, output_data, model):
+def kappa_pruning(input_data, output_data, model, all_data=True, validation_indices=None, M=50):
+    if(not all_data):
+        validation_set = input_data[validation_indices]
+    else:
+        validation_set = input_data
+    
     combs = list(itertools.combinations(model.estimators_, 2))
     naive = []
     for cl1, cl2 in combs:
-        kappa_score = cohen_kappa_score(cl1.predict(input_data), cl2.predict(input_data))
+        kappa_score = cohen_kappa_score(cl1.predict(validation_set), cl2.predict(validation_set))
         if(not np.isnan(kappa_score)):            
             naive.append((kappa_score, cl1, cl2))
 
- 
-    naive_sorted = sorted(naive, key=lambda tup: tup[0])
-    aux = naive_sorted[0:M]
-    aux = []
-    for i in range(0,M):
-        aux.append(naive_sorted[i][1])
-        aux.append(naive_sorted[i][2])
+    naive_sorted = sorted(naive, key=lambda tup: tup[0], reverse=True)   
+    new_estimators = set()
+    i = 0
+    while(len(new_estimators) < M and len(naive_sorted)):
+        pair = naive_sorted.pop()
+        new_estimators.add(pair[1])
+        new_estimators.add(pair[2])    
+        i += 1
         
-    new_estimators = list(set(aux))
-    eclf = EnsembleVoteClassifier(clfs=new_estimators)   
+    eclf = EnsembleVoteClassifier(clfs=list(new_estimators), refit=False)   
     return eclf.fit(input_data, output_data), len(new_estimators)
 
-def best_first(input_data, output_data, model):
+#Modificar para nao dar fit no conjunto todo
+def best_first(input_data, output_data, model, all_data=True, validation_indices=None, M=None):
+    if(not all_data):
+        validation_input_set = input_data[validation_indices]
+        validation_output_set = output_data[validation_indices]
+    else:
+        validation_input_set = input_data
+        validation_output_set = output_data
+    
     estimatorsByFscore = []
     for i, estimator in enumerate(model.estimators_):
-        score = f1_score(output_data, estimator.predict(input_data))
+        score = f1_score(validation_output_set, estimator.predict(validation_input_set))
         if(score > 0):
             estimatorsByFscore.append((score, estimator))
     
@@ -44,9 +57,9 @@ def best_first(input_data, output_data, model):
     best_ensemble = (-1, None, 0)
     for i in range(1, len(estimators) + 1):
         new_pool = estimators[0:i]
-        eclf = EnsembleVoteClassifier(clfs=new_pool)   
+        eclf = EnsembleVoteClassifier(clfs=new_pool, refit=False)   
         ensemble = eclf.fit(input_data, output_data)
-        score = f1_score(output_data, ensemble.predict(input_data)) 
+        score = f1_score(validation_output_set, ensemble.predict(validation_input_set)) 
 
         if(score > best_ensemble[0]):
             best_ensemble = (score, ensemble, i)

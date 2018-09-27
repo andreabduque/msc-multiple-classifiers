@@ -25,38 +25,58 @@ def print_results(results):
 
 def test_prunning(kdn, pruning_function, pruning_name='kappa', M=50):
     results = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
-    results_pruned = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
+    results_pruned_all = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
+    results_pruned_hard = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
+    results_pruned_easy = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
     
     fold = 1
     for train_index, test_index in skf.split(X, y):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
+        kdn_train, kdn_test = kdn[train_index], kdn[test_index]
 
         model = es.fit(X_train, y_train)
-
-        if(pruning_name == 'kappa'):
-            model_pruned, size_pool = pruning_function(M, X_train, y_train, model)
-        else:
-            model_pruned, size_pool = pruning_function(X_train, y_train, model)
-
         y_pred = model.predict(X_test)
-        y_pred_pruned = model_pruned.predict(X_test)
-
         for name, metric in zip(['accuracy','roc_auc','gmean','f1'], [accuracy_score, roc_auc_score, gmean, f1_score]): 
             results[name].append(metric(y_test, y_pred))
-            results_pruned[name].append(metric(y_test, y_pred_pruned))
+
+
+        kdn_hard_indices = np.argwhere(kdn_train > 0.5).flatten()
+        kdn_easy_indices = np.argwhere(kdn_train < 0.5).flatten()
+
+        model_pruned_all, size_pool_all = pruning_function(X_train, y_train, model,  True, M=M)
+        model_pruned_hard, size_pool_hard = pruning_function(X_train, y_train, model,  False, kdn_hard_indices,  M)
+        model_pruned_easy, size_pool_easy = pruning_function(X_train, y_train, model,  False, kdn_easy_indices,  M)
         
+        y_pred_pruned_all = model_pruned_all.predict(X_test)
+        y_pred_pruned_hard = model_pruned_hard.predict(X_test)
+        y_pred_pruned_easy = model_pruned_easy.predict(X_test)
+
+        for name, metric in zip(['accuracy','roc_auc','gmean','f1'], [accuracy_score, roc_auc_score, gmean, f1_score]): 
+            results_pruned_all[name].append(metric(y_test, y_pred_pruned_all))
+            results_pruned_hard[name].append(metric(y_test, y_pred_pruned_hard))
+            results_pruned_easy[name].append(metric(y_test, y_pred_pruned_easy))
+
+        results_pruned_all['pool_size'].append(size_pool_all)
+        results_pruned_hard['pool_size'].append(size_pool_hard)       
+        results_pruned_easy['pool_size'].append(size_pool_easy)         
         results['pool_size'].append(100)
-        results_pruned['pool_size'].append(size_pool)
+
+        #adicionar métricas de diversidade
+       
         print('fold ', str(fold))
         fold += 1
 
     print('sem poda')
     print_results(results)
     print('com poda')
-    print_results(results_pruned)
-
-    
+    print('all')
+    print_results(results_pruned_all)
+    print('hard')
+    print_results(results_pruned_hard)
+    print('easy')
+    print_results(results_pruned_easy)
+  
 
 def get_data(file_path):
     with open(file_path) as f:
@@ -78,7 +98,8 @@ es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 
                     bootstrap_features=False, 
                     n_jobs=4)
 
-test_prunning(kdn(7, X, y), kappa_pruning, 'kappa')
+#test_prunning(kdn(7, X, y), kappa_pruning, 'kappa')
+test_prunning(kdn(7, X, y), best_first, 'best')
 
 #
 
