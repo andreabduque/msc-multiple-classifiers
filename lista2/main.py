@@ -9,6 +9,10 @@ from sklearn.metrics import f1_score
 from pruning import kappa_pruning, best_first
 from mlxtend.classifier import EnsembleVoteClassifier
 
+from utils import kdn 
+
+import time
+
 np.seterr(divide='ignore', invalid='ignore')
 
 #return instances according to instance hardness
@@ -35,31 +39,34 @@ es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 
                     bootstrap_features=False, 
                     n_jobs=4)
 
-mean_fscore_model = []
-mean_fscore_pruned = []
-for train_index, test_index in skf.split(X, y):
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
+kdn(7, X, y)
 
-    model = es.fit(X_train, y_train)
-    mean_fscore_model.append(f1_score(y_test, model.predict(X_test)))
+# mean_fscore_model = []
+# mean_fscore_pruned = []
+# initial = time.time()
+# for train_index, test_index in skf.split(X, y):
+#     X_train, X_test = X[train_index], X[test_index]
+#     y_train, y_test = y[train_index], y[test_index]
 
-    #KAPPA PRUNING
+#     model = es.fit(X_train, y_train)
+#     mean_fscore_model.append(f1_score(y_test, model.predict(X_test)))
 
-    """ estimators = kappa_pruning(500, X_train, model)
-    eclf = EnsembleVoteClassifier(clfs=estimators)   
-    model_pruned = eclf.fit(X_train, y_train) 
-    mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test))) """
+#     #KAPPA PRUNING
 
-    score, model_pruned, size_pool = best_first(X_train, y_train, model)
-    print('tamanho do pruned pool')
-    print(size_pool)
-    mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test)))
+#     """ estimators = kappa_pruning(500, X_train, model)
+#     eclf = EnsembleVoteClassifier(clfs=estimators)   
+#     model_pruned = eclf.fit(X_train, y_train) 
+#     mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test))) """
 
+#     score, model_pruned, size_pool = best_first(X_train, y_train, model)
+#     print('tamanho do pruned pool')
+#     print(size_pool)
+#     mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test)))
 
-print('F-measure do modelo sem poda')
-print(np.mean(mean_fscore_model))
-print('F-measure kappa pruning')
-print(np.mean(mean_fscore_pruned)) 
+# print('tempo ',str(time.time() - initial) )
+# print('F-measure do modelo sem poda')
+# print(np.mean(mean_fscore_model))
+# print('F-measure kappa pruning')
+# print(np.mean(mean_fscore_pruned)) 
 
  
