@@ -18,12 +18,12 @@ np.seterr(divide='ignore', invalid='ignore')
 def print_results(results):
     for key in results.keys():
         print(key, end='\t')
-    
-    print()            
+    print()
     for val in results.values():
         print("{}+-({})".format(str(round(np.mean(val), 2)), str(round(np.std(val), 2))), end='\t')
+    print()
 
-def test_prunning(kdn, pruning_function, pruning_name='kappa', M=400):
+def test_prunning(kdn, pruning_function, pruning_name='kappa', M=50):
     results = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
     results_pruned = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
     
