@@ -6,7 +6,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import Perceptron
 from sklearn.ensemble import BaggingClassifier
 from sklearn.metrics import f1_score
-from pruning import kappa_pruning
+from pruning import kappa_pruning, best_first
 from mlxtend.classifier import EnsembleVoteClassifier
 
 np.seterr(divide='ignore', invalid='ignore')
@@ -25,15 +25,15 @@ def get_data(file_path):
 
     return
 
-X, y = get_data('..\cm1.arff')
+X, y = get_data('../cm1.arff')
 skf = StratifiedKFold(n_splits=10, random_state=42)
 es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 'balanced'), 
-                        n_estimators=100, 
-                        max_samples=1.0, 
-                        max_features=1.0, 
-                        bootstrap=True,
-                        bootstrap_features=False, 
-                        n_jobs=4)
+                    n_estimators=100, 
+                    max_samples=1.0, 
+                    max_features=1.0, 
+                    bootstrap=True,
+                    bootstrap_features=False, 
+                    n_jobs=4)
 
 mean_fscore_model = []
 mean_fscore_pruned = []
@@ -43,14 +43,23 @@ for train_index, test_index in skf.split(X, y):
 
     model = es.fit(X_train, y_train)
     mean_fscore_model.append(f1_score(y_test, model.predict(X_test)))
-    
-    estimators = kappa_pruning(500, X_train, model)
+
+    #KAPPA PRUNING
+
+    """ estimators = kappa_pruning(500, X_train, model)
     eclf = EnsembleVoteClassifier(clfs=estimators)   
     model_pruned = eclf.fit(X_train, y_train) 
+    mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test))) """
+
+    score, model_pruned, size_pool = best_first(X_train, y_train, model)
+    print('tamanho do pruned pool')
+    print(size_pool)
     mean_fscore_pruned.append(f1_score(y_test, model_pruned.predict(X_test)))
-   
+
+
 print('F-measure do modelo sem poda')
 print(np.mean(mean_fscore_model))
 print('F-measure kappa pruning')
-print(np.mean(mean_fscore_pruned))
-    
+print(np.mean(mean_fscore_pruned)) 
+
+ 

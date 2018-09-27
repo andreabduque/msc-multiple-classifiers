@@ -1,9 +1,12 @@
 import itertools
 from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import f1_score
 import numpy as np
 
 from mlxtend.classifier import EnsembleVoteClassifier
 
+import warnings
+warnings.simplefilter("ignore", DeprecationWarning)
 
 #Receives input from validation set
 #Returns pruned model
@@ -26,3 +29,35 @@ def kappa_pruning(M, input_data, model):
     new_estimators = list(set(aux))
     print('Pool reduzido de ', str(len(model.estimators_)), 'para ', str(len(new_estimators)))
     return new_estimators
+
+def best_first(input_data, output_data, model):
+    pool_size = len(model.estimators_)
+    estimatorsByFscore = []
+    for i, estimator in enumerate(model.estimators_):
+        score = f1_score(output_data, estimator.predict(input_data))
+        if(score > 0):
+            estimatorsByFscore.append((score, estimator))
+    
+    estimatorsByFscore = sorted(estimatorsByFscore, key=lambda tup: tup[0], reverse=True)
+    estimators = [tup[1] for tup in estimatorsByFscore]
+
+    #score, ensemble object, pool size
+    best_ensemble = (-1, None, 0)
+    for i in range(1, len(estimators) + 1):
+        new_pool = estimators[0:i]
+        eclf = EnsembleVoteClassifier(clfs=new_pool)   
+        ensemble = eclf.fit(input_data, output_data)
+        score = f1_score(output_data, ensemble.predict(input_data)) 
+
+        if(score > best_ensemble[0]):
+            best_ensemble = (score, ensemble, i)
+
+        print(i)
+
+    return best_ensemble
+
+
+
+
+
+    
