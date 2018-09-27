@@ -25,3 +25,12 @@ def disagreement_measure(c1_pred, c2_pred, ground_truth):
     n_00, n_01, n_10, n11 =  confusion_matrix(c1_correct, c2_correct).ravel()
 
     return (n_01+n_10)/(n_00+n_01+n_10+n11)
+
+def average_pairwise_diversity(values, L):
+    pass
+
+def gmean(y_true, y_pred):    
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    specificity = tn / (tn+fp)
+    sensitivity = tp / (tp+fn)
+    return (specificity*sensitivity)**(1/2)
