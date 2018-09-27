@@ -36,6 +36,7 @@ def kappa_pruning(input_data, output_data, model, all_data=True, validation_indi
     return eclf.fit(input_data, output_data), len(new_estimators)
 
 #Modificar para nao dar fit no conjunto todo
+#modificar pra pegar kdn do conjunto de teste!!!!!!
 def best_first(input_data, output_data, model, all_data=True, validation_indices=None, M=None):
     if(not all_data):
         validation_input_set = input_data[validation_indices]
@@ -60,7 +61,6 @@ def best_first(input_data, output_data, model, all_data=True, validation_indices
         eclf = EnsembleVoteClassifier(clfs=new_pool, refit=False)   
         ensemble = eclf.fit(input_data, output_data)
         score = f1_score(validation_output_set, ensemble.predict(validation_input_set)) 
-
         if(score > best_ensemble[0]):
             best_ensemble = (score, ensemble, i)
 

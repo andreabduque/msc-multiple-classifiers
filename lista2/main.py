@@ -50,6 +50,7 @@ def test_prunning(kdn, pruning_function, pruning_name='kappa', M=50):
         
         y_pred_pruned_all = model_pruned_all.predict(X_test)
         y_pred_pruned_hard = model_pruned_hard.predict(X_test)
+        print(model_pruned_easy)
         y_pred_pruned_easy = model_pruned_easy.predict(X_test)
 
         for name, metric in zip(['accuracy','roc_auc','gmean','f1'], [accuracy_score, roc_auc_score, gmean, f1_score]): 
