@@ -11,11 +11,19 @@ from sklearn.metrics import accuracy_score, roc_auc_score, f1_score
 from mlxtend.classifier import EnsembleVoteClassifier
 
 from pruning import kappa_pruning, best_first
-from utils import kdn, gmean
+from utils import kdn, gmean, average_kappa, average_disagreement
 
 np.seterr(divide='ignore', invalid='ignore')
 
 def print_results(results):
+    #remove nan from kappa and disagreement
+    d = np.array(results['disagreement'])
+    d = d[~np.isnan(d)]
+    results['disagreement'] = d
+    k = np.array(results['kappa'])
+    k = k[~np.isnan(k)]
+    results['kappa'] = k
+
     for key in results.keys():
         print(key, end='\t')
     print()
@@ -24,10 +32,10 @@ def print_results(results):
     print()
 
 def test_prunning(kdn, pruning_function, pruning_name='kappa', M=25):
-    results = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
-    results_pruned_all = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
-    results_pruned_hard = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
-    results_pruned_easy = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[]}
+    results = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[], 'disagreement':[], 'kappa':[]}
+    results_pruned_all = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[], 'disagreement':[], 'kappa':[]}
+    results_pruned_hard = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[], 'disagreement':[], 'kappa':[]}
+    results_pruned_easy = {'accuracy':[], 'roc_auc': [], 'gmean': [], 'f1':[], 'pool_size':[], 'disagreement':[], 'kappa':[]}
     
     fold = 1
     for train_index, test_index in skf.split(X, y):
@@ -43,6 +51,12 @@ def test_prunning(kdn, pruning_function, pruning_name='kappa', M=25):
 
         hard_indices = np.argwhere(kdn_train > 0.5).flatten()
         easy_indices = np.argwhere(kdn_train < 0.5).flatten()
+        print('tam validacao hard')
+        len(len(hard_indices))
+        print('tam validacao easy')
+        len(len(easy_indices))
+        print('tam validacao all')
+        print(len(X_train))
 
         model_pruned_all, size_pool_all = pruning_function(X_train, y_train, model, X_train , y_train, M)
         model_pruned_hard, size_pool_hard = pruning_function(X_train, y_train, model,  X_train[hard_indices], y_train[hard_indices],  M)
@@ -50,7 +64,6 @@ def test_prunning(kdn, pruning_function, pruning_name='kappa', M=25):
         
         y_pred_pruned_all = model_pruned_all.predict(X_test)
         y_pred_pruned_hard = model_pruned_hard.predict(X_test)
-
         y_pred_pruned_easy = model_pruned_easy.predict(X_test)
 
         for name, metric in zip(['accuracy','roc_auc','gmean','f1'], [accuracy_score, roc_auc_score, gmean, f1_score]): 
@@ -64,6 +77,15 @@ def test_prunning(kdn, pruning_function, pruning_name='kappa', M=25):
         results['pool_size'].append(100)
 
         #adicionar métricas de diversidade
+        results_pruned_all['kappa'].append(average_kappa(model_pruned_all.clfs, X_test))
+        results_pruned_hard['kappa'].append(average_kappa(model_pruned_hard.clfs, X_test))       
+        results_pruned_easy['kappa'].append(average_kappa(model_pruned_easy.clfs, X_test))         
+        results['kappa'].append(average_kappa(model.estimators_, X_test))
+
+        results_pruned_all['disagreement'].append(average_disagreement(model_pruned_all.clfs, X_test, y_test))
+        results_pruned_hard['disagreement'].append(average_disagreement(model_pruned_hard.clfs, X_test, y_test))       
+        results_pruned_easy['disagreement'].append(average_disagreement(model_pruned_easy.clfs, X_test, y_test))         
+        results['disagreement'].append(average_disagreement(model.estimators_, X_test, y_test))
        
         print('fold ', str(fold))
         fold += 1
@@ -89,6 +111,7 @@ def get_data(file_path):
 
     return
 
+print('---------cm1----------')
 X, y = get_data('../cm1.arff')
 skf = StratifiedKFold(n_splits=10, random_state=42)
 es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 'balanced'), 
@@ -100,7 +123,37 @@ es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 
                     n_jobs=4)
 
 test_prunning(kdn(7, X, y), kappa_pruning, pruning_name='kappa')
-#test_prunning(kdn(7, X, y), best_first, pruning_name='best')
+test_prunning(kdn(7, X, y), best_first, pruning_name='best')
+
+print('---------kc2----------')
+
+X, y = get_data('../kc2.arff')
+skf = StratifiedKFold(n_splits=10, random_state=42)
+es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 'balanced'), 
+                    n_estimators=100, 
+                    max_samples=1.0, 
+                    max_features=1.0, 
+                    bootstrap=True,
+                    bootstrap_features=False, 
+                    n_jobs=4)
+
+test_prunning(kdn(7, X, y), kappa_pruning, pruning_name='kappa')
+test_prunning(kdn(7, X, y), best_first, pruning_name='best')
+
+print('---------jm1----------')
+
+X, y = get_data('../jm1.arff')
+skf = StratifiedKFold(n_splits=10, random_state=42)
+es = BaggingClassifier(base_estimator= Perceptron(max_iter=1000, class_weight = 'balanced'), 
+                    n_estimators=100, 
+                    max_samples=1.0, 
+                    max_features=1.0, 
+                    bootstrap=True,
+                    bootstrap_features=False, 
+                    n_jobs=4)
+
+test_prunning(kdn(7, X, y), kappa_pruning, pruning_name='kappa')
+test_prunning(kdn(7, X, y), best_first, pruning_name='best')
 
 #
 

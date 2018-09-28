@@ -6,7 +6,8 @@ import numpy as np
 from mlxtend.classifier import EnsembleVoteClassifier
 
 import warnings
-warnings.simplefilter("ignore", DeprecationWarning)
+#warnings.simplefilter("ignore", DeprecationWarning)
+warnings.filterwarnings("ignore")
 
 #Receives input from validation set
 #Returns pruned model
@@ -36,11 +37,13 @@ def best_first(input_data, output_data, model, validation_input, validation_outp
     estimatorsByFscore = []
     for i, estimator in enumerate(model.estimators_):
         score = f1_score(validation_output, estimator.predict(validation_input))
-        #if(score > 0):
-         #   estimatorsByFscore.append((score, estimator))
+        if(score > 0):
+           estimatorsByFscore.append((score, estimator))
 
-   #if(not len(estimatorsByFscore)):
-    #   return model, len(model.estimators_) 
+    if(not len(estimatorsByFscore)):
+        eclf = EnsembleVoteClassifier(clfs=model.estimators_, refit=False)   
+        ensemble = eclf.fit(input_data, output_data)
+        return ensemble, len(model.estimators_) 
     
     estimatorsByFscore = sorted(estimatorsByFscore, key=lambda tup: tup[0], reverse=True)
     estimators = [tup[1] for tup in estimatorsByFscore]
