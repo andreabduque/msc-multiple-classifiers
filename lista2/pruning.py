@@ -10,16 +10,11 @@ warnings.simplefilter("ignore", DeprecationWarning)
 
 #Receives input from validation set
 #Returns pruned model
-def kappa_pruning(input_data, output_data, model, all_data=True, validation_indices=None, M=50):
-    if(not all_data):
-        validation_set = input_data[validation_indices]
-    else:
-        validation_set = input_data
-    
+def kappa_pruning(input_data, output_data, model, validation_input, validation_output, M=50):   
     combs = list(itertools.combinations(model.estimators_, 2))
     naive = []
     for cl1, cl2 in combs:
-        kappa_score = cohen_kappa_score(cl1.predict(validation_set), cl2.predict(validation_set))
+        kappa_score = cohen_kappa_score(cl1.predict(validation_input), cl2.predict(validation_input))
         if(not np.isnan(kappa_score)):            
             naive.append((kappa_score, cl1, cl2))
 
@@ -37,32 +32,30 @@ def kappa_pruning(input_data, output_data, model, all_data=True, validation_indi
 
 #Modificar para nao dar fit no conjunto todo
 #modificar pra pegar kdn do conjunto de teste!!!!!!
-def best_first(input_data, output_data, model, all_data=True, validation_indices=None, M=None):
-    if(not all_data):
-        validation_input_set = input_data[validation_indices]
-        validation_output_set = output_data[validation_indices]
-    else:
-        validation_input_set = input_data
-        validation_output_set = output_data
-    
+def best_first(input_data, output_data, model, validation_input, validation_output, M=None):
     estimatorsByFscore = []
     for i, estimator in enumerate(model.estimators_):
-        score = f1_score(validation_output_set, estimator.predict(validation_input_set))
-        if(score > 0):
-            estimatorsByFscore.append((score, estimator))
+        score = f1_score(validation_output, estimator.predict(validation_input))
+        #if(score > 0):
+         #   estimatorsByFscore.append((score, estimator))
+
+   #if(not len(estimatorsByFscore)):
+    #   return model, len(model.estimators_) 
     
     estimatorsByFscore = sorted(estimatorsByFscore, key=lambda tup: tup[0], reverse=True)
     estimators = [tup[1] for tup in estimatorsByFscore]
 
     #score, ensemble object, pool size
     best_ensemble = (-1, None, 0)
+    
     for i in range(1, len(estimators) + 1):
         new_pool = estimators[0:i]
         eclf = EnsembleVoteClassifier(clfs=new_pool, refit=False)   
         ensemble = eclf.fit(input_data, output_data)
-        score = f1_score(validation_output_set, ensemble.predict(validation_input_set)) 
+        score = f1_score(validation_output, ensemble.predict(validation_input)) 
         if(score > best_ensemble[0]):
             best_ensemble = (score, ensemble, i)
+
 
     return best_ensemble[1], best_ensemble[2]
 
